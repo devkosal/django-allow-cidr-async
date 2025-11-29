@@ -1,5 +1,6 @@
 import ipaddress
 
+from asgiref.sync import iscoroutinefunction, markcoroutinefunction
 from django.conf import settings
 from django.core.exceptions import DisallowedHost, MiddlewareNotUsed
 from django.http.request import split_domain_port, validate_host
@@ -8,8 +9,13 @@ ORIG_ALLOWED_HOSTS = []
 
 
 class AllowCIDRMiddleware:
+    async_capable = True
+    sync_capable = True
+
     def __init__(self, get_response, *args, **kwargs):
         self.get_response = get_response
+        if iscoroutinefunction(self.get_response):
+            markcoroutinefunction(self)
 
         super().__init__(*args, **kwargs)
 
@@ -30,7 +36,7 @@ class AllowCIDRMiddleware:
             # ALLOWED_HOSTS was originally set to '*' so no checking is necessary
             raise MiddlewareNotUsed()
 
-    def __call__(self, request):
+    def _validate_cidr(self, request):
         # Processing the request before we generate the response
         host = request.get_host()
         domain, port = split_domain_port(host)
@@ -52,6 +58,12 @@ class AllowCIDRMiddleware:
             if should_raise:
                 raise DisallowedHost("Invalid HTTP_HOST header: %r." % host)
 
-        response = self.get_response(request)
+    async def __acall__(self, request):
+        self._validate_cidr(request)
+        return await self.get_response(request)
 
-        return response
+    def __call__(self, request):
+        if iscoroutinefunction(self.get_response):
+            return self.__acall__(request)
+        self._validate_cidr(request)
+        return self.get_response(request)
