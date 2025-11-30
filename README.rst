@@ -10,12 +10,15 @@ Django Allow CIDR
 
 A Django Middleware to enable use of CIDR IP ranges in ALLOWED_HOSTS.
 
+This is an async-compatible fork of `django-allow-cidr <https://github.com/mozmeao/django-allow-cidr>`_.
+It supports both WSGI (sync) and ASGI (async) deployments.
+
 Quickstart
 ----------
 
-Install Django Allow CIDR::
+Install from GitHub::
 
-    pip install django-allow-cidr
+    pip install git+https://github.com/devkosal/django-allow-cidr-async.git
 
 Add the Middleware to your ``MIDDLEWARE`` settings. It should be the first in the list:
 
